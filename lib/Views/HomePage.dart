@@ -56,7 +56,6 @@ import 'package:xml/xml.dart' as xml;
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 import '../API/Globals.dart';
-import 'package:workmanager/workmanager.dart';
 
 //tarcker
 final FirebaseAuth auth = FirebaseAuth.instance;
@@ -223,23 +222,20 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
           latIn: globalLatitude1,
           lngIn: globalLongitude1,
         ));
-
         //startTimer();
         _saveCurrentTime();
         _saveClockStatus(true);
         //_getLocation();
         getLocation();
+        _clockRefresh();
         //listenLocation();
         //_listenLocation();
-
         isClockedIn = true;
-
         DBHelper dbmaster = DBHelper();
         dbmaster.postAttendanceTable();
 
       } else {
         service.invoke("stopService");
-
         attendanceViewModel.addAttendanceOut(AttendanceOutModel(
           id: int.parse(id),
           timeOut: _getFormattedtime(),
@@ -251,14 +247,15 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
         ));
         isClockedIn = false;
         _saveClockStatus(false);
-        DBHelper dbmaster = DBHelper();
-        dbmaster.postAttendanceOutTable();
+        //DBHelper dbmaster = DBHelper();
+        //dbmaster.postAttendanceOutTable();
         _stopTimer();
         setState(() async {
+          _clockRefresh();
           //_stopListening();
-          stopListeningnew();
-          await saveGPXFile();
-          await postFile();
+          //stopListeningnew();
+          //await saveGPXFile();
+          //await postFile();
         });
       }
     });
@@ -295,6 +292,39 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
         ?.createNotificationChannel(channel);
   }
 
+  // Future<void> saveGPXFile() async {
+  //   print(" q100 start svae GPX");
+  //   final date = DateFormat('dd-MM-yyyy').format(DateTime.now());
+  //   final gpxString = await GpxWriter().asString(gpx, pretty: true);
+  //   final downloadDirectory = await getDownloadsDirectory();
+  //   final filePath = "${downloadDirectory!.path}/track$date.gpx";
+  //   final file = File(filePath);
+  //   print("q100 Mid svae GPX");
+  //   if (await file.exists()) {
+  //     print("q100 File Exist 1");
+  //     var existingGpx = await GpxReader().fromString(await file.readAsString());
+  //     print("q100 File Exist 2");
+  //     var newSegment = await GpxReader().fromString(gpxString);
+  //     print("q100 File Exist 3");
+  //     existingGpx.trks[0].trksegs.add(newSegment.trks[0].trksegs[0]);
+  //     print("q100 File Exist 4");
+  //     await file.writeAsString(GpxWriter().asString(existingGpx, pretty: true));
+  //     print("q100 File Exist 5");
+  //   } else {
+  //     print("q100 File not Exist");
+  //     await file.writeAsString(gpxString);
+  //   }
+  //
+  //   print('q100 GPX file saved successfully at ${file.path}');
+  //   // Fluttertoast.showToast(
+  //   //   msg: "GPX file saved in the Downloads folder!",
+  //   //   toastLength: Toast.LENGTH_SHORT,
+  //   //   gravity: ToastGravity.BOTTOM,
+  //   //   backgroundColor: Colors.green,
+  //   //   textColor: Colors.white,
+  //   // );
+  // }
+
   Future<void> showNotification(String title, String body) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
     AndroidNotificationDetails(
@@ -327,11 +357,12 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
     print(isClockedIn.toString() + "RES B100");
     if (isClockedIn == true) {
       print("B100 CLOCKIN RUNN");
-      //_startTimerFromSavedTime();
-      _clockRefresh();
+      //startTimerFromSavedTime();
+      final service = FlutterBackgroundService();
+      service.startService();
+      //_clockRefresh();
     }else{
-      print("B100 CLOCKIN NOTT RUNN");
-      _clockRefresh();
+      prefs.setInt('secondsPassed', 0);
     }
   }
 
@@ -349,13 +380,9 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
     fetchShopList();
     _retrieveSavedValues();
     _clockRefresh();
-
     print("B100 IF RUNN ${isClockedIn.toString()}");
-
-
     _currentDate = DateTime.now();
     _currentTime = TimeOfDay.fromDateTime(_currentDate);
-
     _requestPermission();
     location.changeSettings(interval: 300, accuracy: loc.LocationAccuracy.high);
     location.enableBackgroundMode(enable: true);
@@ -363,35 +390,6 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
 
 
     _getFormattedDate();
-  }
-
-  void _startTimerFromSavedTime() {
-    SharedPreferences.getInstance().then((prefs) {
-      String savedTime = prefs.getString('savedTime') ?? '00:00:00';
-      List<String> timeComponents = savedTime.split(':');
-      int hours = int.parse(timeComponents[0]);
-      int minutes = int.parse(timeComponents[1]);
-      int seconds = int.parse(timeComponents[2]);
-
-      // Calculate the total seconds of the saved time
-      int totalSavedSeconds = hours * 3600 + minutes * 60 + seconds;
-
-      // Get the current time
-      final now = DateTime.now();
-      int totalCurrentSeconds = now.hour * 3600 + now.minute * 60 + now.second;
-
-      // Calculate the difference between the current time and the saved time
-      secondsPassed = totalCurrentSeconds - totalSavedSeconds;
-      if (secondsPassed < 0) {
-        // This means the saved time is in the future compared to the current time
-        // Handle this case appropriately
-        secondsPassed = 0;
-      }
-
-      print("Loaded Saved Time");
-      startTimer();
-
-    });
   }
 
 
@@ -975,31 +973,6 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
   //   });
   // }
 
-  Future<void> saveGPXFile() async {
-    final date = DateFormat('dd-MM-yyyy').format(DateTime.now());
-    final gpxString = await GpxWriter().asString(gpx, pretty: true);
-    final downloadDirectory = await getDownloadsDirectory();
-    final filePath = "${downloadDirectory!.path}/track$date.gpx";
-    final file = File(filePath);
-
-    if (await file.exists()) {
-      final existingGpx = await GpxReader().fromString(await file.readAsString());
-      final newSegment = GpxReader().fromString(gpxString); // Replace this with the actual segment you want to add
-      existingGpx.trks[0].trksegs.add(newSegment.trks[0].trksegs[0]);
-      await file.writeAsString(GpxWriter().asString(existingGpx, pretty: true));
-    } else {
-      await file.writeAsString(gpxString);
-    }
-
-    print('GPX file saved successfully at ${file.path}');
-    Fluttertoast.showToast(
-      msg: "GPX file saved in the Downloads folder!",
-      toastLength: Toast.LENGTH_SHORT,
-      gravity: ToastGravity.BOTTOM,
-      backgroundColor: Colors.green,
-      textColor: Colors.white,
-    );
-  }
 
   Future<void> GPXinfo() async {
     final date = DateFormat('dd-MM-yyyy').format(DateTime.now());
@@ -1068,10 +1041,6 @@ class _HomePageState extends State<HomePage>with WidgetsBindingObserver {
   //   }
   // }
 
-  void _stopListening() {
-    _positionStreamSubscription?.cancel();
-    _positionStreamSubscription = null;
-  }
   void showLoadingIndicator(BuildContext context) {
     showDialog(
       context: context,

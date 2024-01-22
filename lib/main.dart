@@ -11,11 +11,9 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geolocator/geolocator.dart' as gp;
-import 'package:gpx/gpx.dart';
+import 'package:get/get.dart';
 import 'package:order_booking_shop/Tracker/trac.dart';
-import 'package:order_booking_shop/Views/HomePage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'API/DatabaseOutputs.dart';
 import 'API/Globals.dart';
 import 'Databases/DBHelper.dart';
 import 'Views/splash_screen.dart';
@@ -103,13 +101,14 @@ void onStart(ServiceInstance service) async {
     });
   }
 
-  service.on('stopService').listen((event) {
+  service.on('stopService').listen((event) async {
     service.stopSelf();
+    EndAllServicesLocation();
   });
 
   if(isClockedIn == false){
     startTimer();
-    //listenLocation();
+    listenLocation();
   }
 
 
@@ -119,7 +118,21 @@ void onStart(ServiceInstance service) async {
         flutterLocalNotificationsPlugin.show(
           888,
           'COOL SERVICE',
-          'Awesome ${gpx.toString()}',
+          'Awesome',
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'my_foreground',
+              'MY FOREGROUND SERVICE',
+              icon: 'ic_bg_service_small',
+              ongoing: true,
+            ),
+          ),
+        );
+
+        flutterLocalNotificationsPlugin.show(
+          889,
+          'Location',
+          'Longitude ${long} , Latitute $lat',
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'my_foreground',
@@ -131,7 +144,7 @@ void onStart(ServiceInstance service) async {
         );
 
         service.setForegroundNotificationInfo(
-          title: "My App Service",
+          title: "Timer",
           content: "Timer ${_formatDuration(secondsPassed.toString())}",
         );
       }
