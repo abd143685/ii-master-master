@@ -103,7 +103,9 @@ void onStart(ServiceInstance service) async {
 
   service.on('stopService').listen((event) async {
     service.stopSelf();
-    EndAllServicesLocation();
+    //EndAllServicesLocation();
+    stopListeningLocation();
+    FlutterLocalNotificationsPlugin().cancelAll();
   });
 
   if(isClockedIn == false){
@@ -144,7 +146,7 @@ void onStart(ServiceInstance service) async {
         );
 
         service.setForegroundNotificationInfo(
-          title: "Timer",
+          title: "My App Service",
           content: "Timer ${_formatDuration(secondsPassed.toString())}",
         );
       }
