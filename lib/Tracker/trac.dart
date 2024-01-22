@@ -67,7 +67,7 @@ Future<void> listenLocation() async {
       desiredAccuracy: LocationAccuracy.bestForNavigation,
     );
     print("W100 Repeat");
-    await FirebaseFirestore.instance.collection('location').doc("iqra").set({
+    await FirebaseFirestore.instance.collection('location').doc("iqra ").set({
       'latitude': position.latitude,
       'longitude': position.longitude,
       'name': name.toString(),
